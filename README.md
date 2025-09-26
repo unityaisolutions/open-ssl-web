@@ -111,6 +111,52 @@ Manual wiring example
 </script>
 ```
 
+Deploy to Vercel
+----------------
+This repo includes an npm script that prepares a deployable folder (vercel-build) and deploys it to Vercel. It:
+- Builds a fresh WASM (npm run build:wasm)
+- Copies the entire project into vercel-build (excluding dev/build artifacts)
+- Moves examples/index.html to vercel-build/index.html
+- Rewrites relative paths so index.html references dist and src from vercel-build root
+- Deploys vercel-build with the Vercel CLI
+
+Prerequisites (one-time):
+- Install Vercel CLI:
+  ```bash
+  npm i -g vercel
+  ```
+- Login:
+  ```bash
+  vercel login
+  ```
+- Link the deploy folder (must be done once before the first deployment):
+  - Ensure the folder exists:
+    ```bash
+    mkdir -p vercel-build
+    ```
+  - Link vercel-build to a Vercel project:
+    ```bash
+    vercel link --cwd vercel-build
+    ```
+    Follow the prompts to create/select a project and scope.
+
+Deploy
+- Run:
+  ```bash
+  npm run deploy:vercel
+  ```
+  The script will:
+  - Build fresh WASM
+  - Sync files into vercel-build
+  - Move examples/index.html to vercel-build/index.html
+  - Rewrite any ../dist/... and ../src/... references to dist/... and src/...
+  - Deploy vercel-build to production with Vercel
+
+Notes
+- If you relocate or rename examples/index.html, adjust the script at scripts/deploy-vercel.sh accordingly.
+- The script preserves vercel-build/.vercel, so you only need to run vercel link once.
+- You can view deployment logs and URLs in your Vercel dashboard.
+
 Notes on Security
 -----------------
 - WebOpenSSL uses cryptographically secure randomness:

@@ -17,7 +17,8 @@
   "license": "MIT",
   "scripts": {
     "build:wasm": "bash scripts/build-openssl-wasm.sh",
-    "serve:demo": "http-server -p 5173 -c-1 -o /examples/ ."
+    "serve:demo": "http-server -p 5173 -c-1 -o /examples/ .",
+    "deploy:vercel": "bash scripts/deploy-vercel.sh"
   },
   "devDependencies": {
     "http-server": "^14.1.1"
