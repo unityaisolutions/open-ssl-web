@@ -16,6 +16,7 @@
   "author": "Genie",
   "license": "MIT",
   "scripts": {
+    "setup": "bash scripts/setup.sh",
     "build:wasm": "bash scripts/build-openssl-wasm.sh"
   }
 }
