@@ -16,6 +16,10 @@
   "author": "Genie",
   "license": "MIT",
   "scripts": {
-    "build:wasm": "bash scripts/build-openssl-wasm.sh"
+    "build:wasm": "bash scripts/build-openssl-wasm.sh",
+    "serve:demo": "http-server -p 5173 -c-1 -o /examples/ ."
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
   }
 }
