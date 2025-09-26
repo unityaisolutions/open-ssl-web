@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>WebOpenSSL Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; padding: 2rem; line-height: 1.5; }
+    .key { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; word-break: break-all; margin-top: 0.5rem; padding: 0.75rem; background: #f7f7f9; border: 1px solid #e6e6e8; border-radius: 8px; }
+    .row { margin-bottom: 1rem; }
+    button { padding: 0.6rem 1rem; border: 1px solid #ccc; border-radius: 6px; background: #fff; cursor: pointer; }
+    button:hover { background: #f0f0f0; }
+    .provider { color: #555; }
+  </style>
+</head>
+<body>
+  <h1>WebOpenSSL Demo</h1>
+  <p class="provider">Provider: <span id="provider"></span></p>
+
+  <div class="row">
+    <button id="gen32">Generate base64 key (32 bytes)</button>
+    <div id="k32" class="key"></div>
+  </div>
+
+  <div class="row">
+    <button id="gen64">Generate base64 key (64 bytes)</button>
+    <div id="k64" class="key"></div>
+  </div>
+
+  <div class="row">
+    <button id="genhex32">Generate hex key (32 bytes)</button>
+    <div id="khex32" class="key"></div>
+  </div>
+
+  <script src="../dist/webopenssl.min.js"></script>
+  <script>
+    document.getElementById('provider').textContent = WebOpenSSL.getProviderName();
+
+    document.getElementById('gen32').addEventListener('click', () => {
+      document.getElementById('k32').textContent = WebOpenSSL.randBase64(32);
+    });
+
+    document.getElementById('gen64').addEventListener('click', () => {
+      document.getElementById('k64').textContent = WebOpenSSL.randBase64(64);
+    });
+
+    document.getElementById('genhex32').addEventListener('click', () => {
+      document.getElementById('khex32').textContent = WebOpenSSL.randHex(32);
+    });
+  </script>
+</body>
+</html>
