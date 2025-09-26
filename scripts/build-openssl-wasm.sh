@@ -67,12 +67,18 @@ function build_openssl_libcrypto() {
   export CFLAGS="-O3 -fPIC"
   export LDFLAGS="-O3"
 
-  # Use a generic 32-bit target and disable unsupported features in WASM
-  emconfigure ./Configure linux-generic32 no-asm no-shared no-threads no-dso no-ui no-tests -DOPENSSL_NO_SECURE_MEMORY
+  # Some environments set CROSS_COMPILE; OpenSSL's build system may prefix $(CC) with it.
+  # That can produce broken paths like .../emscripten/em/.../emcc. Ensure it's empty.
+  unset CROSS_COMPILE || true
+  export CROSS_COMPILE=""
+
+  # Configure OpenSSL directly (no emconfigure) to avoid CROSS_COMPILE prefixing bugs.
+  # Target a generic 32-bit linux and disable unsupported features in WASM.
+  perl ./Configure linux-generic32 no-asm no-shared no-threads no-dso no-ui no-tests -DOPENSSL_NO_SECURE_MEMORY
 
   echo "Building libcrypto (this can take a while)..."
-  emmake make -j"${NPROC}" build_generated
-  emmake make -j"${NPROC}" libcrypto.a
+  make -j"${NPROC}" build_generated
+  make -j"${NPROC}" libcrypto.a
 
   if [ ! -f "libcrypto.a" ]; then
     echo "ERROR: libcrypto.a not found after build"
