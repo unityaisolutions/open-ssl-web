@@ -1,6 +1,6 @@
 {
   "name": "webopenssl",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Web-based OpenSSL-like random key generator (WASM or min.js). Provides rand -base64 and -hex outputs using WebCrypto or optional OpenSSL-wasm.",
   "main": "dist/webopenssl.min.js",
   "module": "src/index.js",
@@ -13,7 +13,7 @@
     "base64",
     "hex"
   ],
-  "author": "Genie",
+  "author": "Alex Scott",
   "license": "MIT",
   "scripts": {
     "build:wasm": "bash scripts/build-openssl-wasm.sh",
