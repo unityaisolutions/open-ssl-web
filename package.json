@@ -14,5 +14,8 @@
     "hex"
   ],
   "author": "Genie",
-  "license": "MIT"
+  "license": "MIT",
+  "scripts": {
+    "build:wasm": "bash scripts/build-openssl-wasm.sh"
+  }
 }

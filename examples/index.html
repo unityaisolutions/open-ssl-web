@@ -34,7 +34,16 @@
 
   <script src="../dist/webopenssl.min.js"></script>
   <script>
-    document.getElementById('provider').textContent = WebOpenSSL.getProviderName();
+    function updateProvider() {
+      document.getElementById('provider').textContent = WebOpenSSL.getProviderName();
+    }
+    updateProvider();
+
+    // Try to auto-load the OpenSSL WASM provider if available
+    WebOpenSSL.autoLoadOpenSSLWASM({ url: '../dist/openssl-wasm/openssl_module.js' })
+      .then((loaded) => {
+        if (loaded) updateProvider();
+      });
 
     document.getElementById('gen32').addEventListener('click', () => {
       document.getElementById('k32').textContent = WebOpenSSL.randBase64(32);
