@@ -74,7 +74,8 @@ function build_openssl_libcrypto() {
 
   # Configure OpenSSL directly (no emconfigure) to avoid CROSS_COMPILE prefixing bugs.
   # Target a generic 32-bit linux and disable unsupported features in WASM.
-  perl ./Configure linux-generic32 no-asm no-shared no-threads no-dso no-ui no-tests -DOPENSSL_NO_SECURE_MEMORY
+  # Explicitly disable Linux-only engines (AFALG/devcrypto) and the engine subsystem entirely.
+  perl ./Configure linux-generic32 no-asm no-shared no-threads no-dso no-ui no-tests no-engine no-afalgeng no-devcryptoeng -DOPENSSL_NO_SECURE_MEMORY
 
   echo "Building libcrypto (this can take a while)..."
   make -j"${NPROC}" build_generated
