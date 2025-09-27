@@ -81,6 +81,27 @@ function wasmOpenSSLProvider(Module) {
   if (!randFn) {
     throw new Error("Missing RAND function in Module (expected openssl_rand_bytes or RAND_bytes)");
   }
+
+  // Optional additional OpenSSL exports
+  let pbkdf2_sha256, pbkdf2_sha512, sha256_digest, sha512_digest, aes_256_gcm_encrypt, aes_256_gcm_decrypt;
+  try { pbkdf2_sha256 = Module.cwrap("pbkdf2_hmac_sha256", "number", ["number","number","number","number","number","number","number"]); } catch (_) {}
+  try { pbkdf2_sha512 = Module.cwrap("pbkdf2_hmac_sha512", "number", ["number","number","number","number","number","number","number"]); } catch (_) {}
+  try { sha256_digest = Module.cwrap("sha256_digest", "number", ["number","number","number"]); } catch (_) {}
+  try { sha512_digest = Module.cwrap("sha512_digest", "number", ["number","number","number"]); } catch (_) {}
+  try { aes_256_gcm_encrypt = Module.cwrap("aes_256_gcm_encrypt", "number", ["number","number","number","number","number","number","number","number","number"]); } catch (_) {}
+  try { aes_256_gcm_decrypt = Module.cwrap("aes_256_gcm_decrypt", "number", ["number","number","number","number","number","number","number","number","number"]); } catch (_) {}
+
+  function mallocCopy(bytes) {
+    const ptr = Module._malloc(bytes.length);
+    Module.HEAPU8.set(bytes, ptr);
+    return ptr;
+  }
+  function copyOut(ptr, len) {
+    const out = new Uint8Array(len);
+    out.set(Module.HEAPU8.subarray(ptr, ptr + len));
+    return out;
+  }
+
   return {
     name: "openssl-wasm",
     randBytes(length) {
@@ -95,6 +116,138 @@ function wasmOpenSSLProvider(Module) {
       out.set(Module.HEAPU8.subarray(ptr, ptr + length));
       Module._free(ptr);
       return out;
+    },
+
+    // Hashing
+    sha256(bytes) {
+      if (!sha256_digest) throw new Error("sha256_digest not exported by OpenSSL WASM");
+      if (!(bytes instanceof Uint8Array)) throw new Error("bytes must be Uint8Array");
+      const inPtr = mallocCopy(bytes);
+      const outPtr = Module._malloc(32);
+      const ret = sha256_digest(inPtr, bytes.length, outPtr);
+      Module._free(inPtr);
+      if (ret !== 1) { Module._free(outPtr); throw new Error("sha256 failed"); }
+      const out = copyOut(outPtr, 32);
+      Module._free(outPtr);
+      return out;
+    },
+
+    sha512(bytes) {
+      if (!sha512_digest) throw new Error("sha512_digest not exported by OpenSSL WASM");
+      if (!(bytes instanceof Uint8Array)) throw new Error("bytes must be Uint8Array");
+      const inPtr = mallocCopy(bytes);
+      const outPtr = Module._malloc(64);
+      const ret = sha512_digest(inPtr, bytes.length, outPtr);
+      Module._free(inPtr);
+      if (ret !== 1) { Module._free(outPtr); throw new Error("sha512 failed"); }
+      const out = copyOut(outPtr, 64);
+      Module._free(outPtr);
+      return out;
+    },
+
+    // PBKDF2
+    pbkdf2HmacSha256(passwordBytes, saltBytes, iterations, keyLen) {
+      if (!pbkdf2_sha256) throw new Error("pbkdf2_hmac_sha256 not exported by OpenSSL WASM");
+      if (!(passwordBytes instanceof Uint8Array)) throw new Error("passwordBytes must be Uint8Array");
+      if (!(saltBytes instanceof Uint8Array)) throw new Error("saltBytes must be Uint8Array");
+      if (!Number.isInteger(iterations) || iterations <= 0) throw new Error("iterations must be a positive integer");
+      if (!Number.isInteger(keyLen) || keyLen <= 0) throw new Error("keyLen must be a positive integer");
+      const passPtr = mallocCopy(passwordBytes);
+      const saltPtr = mallocCopy(saltBytes);
+      const outPtr = Module._malloc(keyLen);
+      const ret = pbkdf2_sha256(passPtr, passwordBytes.length, saltPtr, saltBytes.length, iterations, outPtr, keyLen);
+      Module._free(passPtr);
+      Module._free(saltPtr);
+      if (ret !== 1) { Module._free(outPtr); throw new Error("PBKDF2-HMAC-SHA256 failed"); }
+      const out = copyOut(outPtr, keyLen);
+      Module._free(outPtr);
+      return out;
+    },
+
+    pbkdf2HmacSha512(passwordBytes, saltBytes, iterations, keyLen) {
+      if (!pbkdf2_sha512) throw new Error("pbkdf2_hmac_sha512 not exported by OpenSSL WASM");
+      if (!(passwordBytes instanceof Uint8Array)) throw new Error("passwordBytes must be Uint8Array");
+      if (!(saltBytes instanceof Uint8Array)) throw new Error("saltBytes must be Uint8Array");
+      if (!Number.isInteger(iterations) || iterations <= 0) throw new Error("iterations must be a positive integer");
+      if (!Number.isInteger(keyLen) || keyLen <= 0) throw new Error("keyLen must be a positive integer");
+      const passPtr = mallocCopy(passwordBytes);
+      const saltPtr = mallocCopy(saltBytes);
+      const outPtr = Module._malloc(keyLen);
+      const ret = pbkdf2_sha512(passPtr, passwordBytes.length, saltPtr, saltBytes.length, iterations, outPtr, keyLen);
+      Module._free(passPtr);
+      Module._free(saltPtr);
+      if (ret !== 1) { Module._free(outPtr); throw new Error("PBKDF2-HMAC-SHA512 failed"); }
+      const out = copyOut(outPtr, keyLen);
+      Module._free(outPtr);
+      return out;
+    },
+
+    // AES-256-GCM
+    aes256GcmEncrypt(key, iv, aad, plaintext) {
+      if (!aes_256_gcm_encrypt) throw new Error("aes_256_gcm_encrypt not exported by OpenSSL WASM");
+      if (!(key instanceof Uint8Array) || key.length !== 32) throw new Error("key must be 32-byte Uint8Array");
+      if (!(iv instanceof Uint8Array)) throw new Error("iv must be Uint8Array");
+      if (!(aad instanceof Uint8Array)) aad = new Uint8Array(0);
+      if (!(plaintext instanceof Uint8Array)) throw new Error("plaintext must be Uint8Array");
+      const keyPtr = mallocCopy(key);
+      const ivPtr = mallocCopy(iv);
+      const aadPtr = mallocCopy(aad);
+      const inPtr = mallocCopy(plaintext);
+      const outPtr = Module._malloc(plaintext.length + 16);
+      const tagPtr = Module._malloc(16);
+
+      const ret = aes_256_gcm_encrypt(keyPtr, ivPtr, iv.length, aadPtr, aad.length, inPtr, plaintext.length, outPtr, tagPtr);
+
+      Module._free(keyPtr);
+      Module._free(ivPtr);
+      Module._free(aadPtr);
+      Module._free(inPtr);
+
+      if (ret < 0) {
+        Module._free(outPtr);
+        Module._free(tagPtr);
+        throw new Error("AES-256-GCM encrypt failed");
+      }
+
+      const ciphertext = copyOut(outPtr, ret);
+      const tag = copyOut(tagPtr, 16);
+
+      Module._free(outPtr);
+      Module._free(tagPtr);
+
+      return { ciphertext, tag };
+    },
+
+    aes256GcmDecrypt(key, iv, aad, ciphertext, tag) {
+      if (!aes_256_gcm_decrypt) throw new Error("aes_256_gcm_decrypt not exported by OpenSSL WASM");
+      if (!(key instanceof Uint8Array) || key.length !== 32) throw new Error("key must be 32-byte Uint8Array");
+      if (!(iv instanceof Uint8Array)) throw new Error("iv must be Uint8Array");
+      if (!(aad instanceof Uint8Array)) aad = new Uint8Array(0);
+      if (!(ciphertext instanceof Uint8Array)) throw new Error("ciphertext must be Uint8Array");
+      if (!(tag instanceof Uint8Array) || tag.length !== 16) throw new Error("tag must be 16-byte Uint8Array");
+      const keyPtr = mallocCopy(key);
+      const ivPtr = mallocCopy(iv);
+      const aadPtr = mallocCopy(aad);
+      const inPtr = mallocCopy(ciphertext);
+      const tagPtr = mallocCopy(tag);
+      const outPtr = Module._malloc(ciphertext.length);
+
+      const ret = aes_256_gcm_decrypt(keyPtr, ivPtr, iv.length, aadPtr, aad.length, inPtr, ciphertext.length, tagPtr, outPtr);
+
+      Module._free(keyPtr);
+      Module._free(ivPtr);
+      Module._free(aadPtr);
+      Module._free(inPtr);
+      Module._free(tagPtr);
+
+      if (ret < 0) {
+        Module._free(outPtr);
+        throw new Error("AES-256-GCM decrypt failed or authentication tag mismatch");
+      }
+
+      const plaintext = copyOut(outPtr, ret);
+      Module._free(outPtr);
+      return plaintext;
     }
   };
 }
@@ -136,4 +289,35 @@ export async function autoLoadOpenSSLWASM(options = {}) {
   const Module = await factory();
   setWasmModule(Module);
   return true;
+}
+
+/* Additional top-level APIs (available only when using the OpenSSL WASM provider) */
+export function sha256(bytes) {
+  if (!_provider || typeof _provider.sha256 !== "function") throw new Error("sha256 not available (requires OpenSSL WASM provider)");
+  return _provider.sha256(bytes);
+}
+
+export function sha512(bytes) {
+  if (!_provider || typeof _provider.sha512 !== "function") throw new Error("sha512 not available (requires OpenSSL WASM provider)");
+  return _provider.sha512(bytes);
+}
+
+export function pbkdf2HmacSha256(passwordBytes, saltBytes, iterations, keyLen) {
+  if (!_provider || typeof _provider.pbkdf2HmacSha256 !== "function") throw new Error("pbkdf2HmacSha256 not available (requires OpenSSL WASM provider)");
+  return _provider.pbkdf2HmacSha256(passwordBytes, saltBytes, iterations, keyLen);
+}
+
+export function pbkdf2HmacSha512(passwordBytes, saltBytes, iterations, keyLen) {
+  if (!_provider || typeof _provider.pbkdf2HmacSha512 !== "function") throw new Error("pbkdf2HmacSha512 not available (requires OpenSSL WASM provider)");
+  return _provider.pbkdf2HmacSha512(passwordBytes, saltBytes, iterations, keyLen);
+}
+
+export function aes256GcmEncrypt(key, iv, aad, plaintext) {
+  if (!_provider || typeof _provider.aes256GcmEncrypt !== "function") throw new Error("aes256GcmEncrypt not available (requires OpenSSL WASM provider)");
+  return _provider.aes256GcmEncrypt(key, iv, aad, plaintext);
+}
+
+export function aes256GcmDecrypt(key, iv, aad, ciphertext, tag) {
+  if (!_provider || typeof _provider.aes256GcmDecrypt !== "function") throw new Error("aes256GcmDecrypt not available (requires OpenSSL WASM provider)");
+  return _provider.aes256GcmDecrypt(key, iv, aad, ciphertext, tag);
 }
