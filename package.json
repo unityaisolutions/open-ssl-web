@@ -1,6 +1,6 @@
 {
   "name": "webopenssl",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Web-based OpenSSL-like random key generator (WASM or min.js). Provides rand -base64 and -hex outputs using WebCrypto or optional OpenSSL-wasm.",
   "main": "dist/webopenssl.min.js",
   "module": "src/index.js",
