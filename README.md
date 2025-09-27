@@ -31,6 +31,13 @@ API
 - setWasmModule(Module: EmscriptenModule) — configures OpenSSL WASM provider
 - getProviderName(): string
 - autoLoadOpenSSLWASM(options?: { url?: string; factoryGlobalName?: string }): Promise<boolean>
+- When OpenSSL WASM provider is loaded (openssl-wasm), additional functions are available:
+  - sha256(bytes: Uint8Array): Uint8Array (32 bytes)
+  - sha512(bytes: Uint8Array): Uint8Array (64 bytes)
+  - pbkdf2HmacSha256(password: Uint8Array, salt: Uint8Array, iterations: number, keyLen: number): Uint8Array
+  - pbkdf2HmacSha512(password: Uint8Array, salt: Uint8Array, iterations: number, keyLen: number): Uint8Array
+  - aes256GcmEncrypt(key: Uint8Array(32), iv: Uint8Array, aad: Uint8Array, plaintext: Uint8Array): { ciphertext: Uint8Array, tag: Uint8Array(16) }
+  - aes256GcmDecrypt(key: Uint8Array(32), iv: Uint8Array, aad: Uint8Array, ciphertext: Uint8Array, tag: Uint8Array(16)): Uint8Array
 
 Usage (Browser, min.js)
 -----------------------

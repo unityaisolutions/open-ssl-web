@@ -108,7 +108,7 @@ function build_wrapper_module() {
     -s ALLOW_MEMORY_GROWTH=1 \
     -s NO_FILESYSTEM=1 \
     -s ERROR_ON_UNDEFINED_SYMBOLS=0 \
-    -s EXPORTED_FUNCTIONS="['_openssl_rand_bytes','_malloc','_free']" \
+    -s EXPORTED_FUNCTIONS="['_openssl_rand_bytes','_pbkdf2_hmac_sha256','_pbkdf2_hmac_sha512','_sha256_digest','_sha512_digest','_aes_256_gcm_encrypt','_aes_256_gcm_decrypt','_malloc','_free']" \
     -s EXPORTED_RUNTIME_METHODS="['cwrap']" \
     -o "${OUT_DIR}/openssl_module.js"
 
