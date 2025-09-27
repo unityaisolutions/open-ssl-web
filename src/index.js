@@ -263,7 +263,7 @@ export function setWasmModule(Module) {
  * - factoryGlobalName: if the factory is already on globalThis, its name (default: "OpenSSLModuleFactory")
  */
 export async function autoLoadOpenSSLWASM(options = {}) {
-  const url = options.url || "./dist/openssl-wasm/openssl_module.js";
+  const jsUrl = options.url || "./dist/openssl-wasm/openssl_module.js";
   const factoryName = options.factoryGlobalName || "OpenSSLModuleFactory";
 
   function loadScript(u) {
@@ -273,20 +273,37 @@ export async function autoLoadOpenSSLWASM(options = {}) {
       s.src = u;
       s.async = true;
       s.onload = () => resolve();
-      s.onerror = (e) => reject(new Error("Failed to load " + u));
+      s.onerror = () => reject(new Error("Failed to load " + u));
       document.head.appendChild(s);
     });
   }
 
+  function deriveWasmUrlFromJs(u) {
+    try {
+      const abs = new URL(u, typeof document !== "undefined" ? document.baseURI : (globalThis && globalThis.location ? globalThis.location.href : undefined));
+      abs.pathname = abs.pathname.replace(/\.js$/, ".wasm");
+      return abs.toString();
+    } catch (_) {
+      return u.replace(/\.js$/, ".wasm");
+    }
+  }
+
   let factory = globalThis[factoryName];
   if (!factory) {
-    await loadScript(url).catch(() => {});
+    await loadScript(jsUrl).catch(() => {});
     factory = globalThis[factoryName];
   }
   if (!factory) {
     return false;
   }
-  const Module = await factory();
+
+  const wasmUrl = deriveWasmUrlFromJs(jsUrl);
+
+  const Module = await factory({
+    locateFile: (p) => (p && p.endsWith(".wasm")) ? wasmUrl : p,
+    wasmBinaryFile: wasmUrl
+  });
+
   setWasmModule(Module);
   return true;
 }

@@ -72,6 +72,26 @@ If you build the OpenSSL WASM module, you can auto-load it:
 </script>
 ```
 
+Notes: WASM URL resolution and deployment
+----------------------------------------
+- The loader derives the `.wasm` URL from the JS factory URL you pass to `autoLoadOpenSSLWASM` by replacing `.js` with `.wasm`.
+  - Example: `./dist/openssl-wasm/openssl_module.js` → `./dist/openssl-wasm/openssl_module.wasm`
+- It explicitly passes `locateFile` and `wasmBinaryFile` to the Emscripten factory so the `.wasm` is fetched from that derived path.
+- This avoids relative-path issues on hosts like Vercel where asset bases differ.
+- If you serve assets from a CDN or different base path, provide an absolute URL for `options.url`; the `.wasm` will be fetched alongside it.
+
+Verify WASM loading (Vercel)
+----------------------------
+- After `npm run deploy:vercel`, open the deployed site and the browser devtools network panel.
+- You should see a request for `openssl_module.wasm` with:
+  - Status 200 and Type “wasm”
+  - Request URL matching your JS path with `.wasm` extension
+- If you see 404:
+  - Ensure the build produced both `dist/openssl-wasm/openssl_module.js` and `dist/openssl-wasm/openssl_module.wasm` (`npm run build:wasm`).
+  - Confirm they are present in the deployed output folder (`vercel-build/dist/openssl-wasm`) before deploy.
+  - Ensure your HTML references the JS factory using a correct path for your deployment. The included deploy script rewrites `../dist/...` to `dist/...` when moving `examples/index.html` to the root.
+- If the `.wasm` is fetched from an unexpected location, pass an absolute `options.url` pointing to the JS asset where you want the `.wasm` to live and the loader will derive the correct `.wasm` URL automatically.
+
 Usage (ESM)
 -----------
 ```js
